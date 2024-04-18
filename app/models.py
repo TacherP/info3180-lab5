@@ -16,8 +16,6 @@ class MovieProfile(db.Model):
     description = db.Column(db.Text, nullable=False)
     poster = db.Column(db.String(80), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    db = SQLAlchemy()
     
 
     def __init__(self, title, description, poster, datetime):
@@ -26,6 +24,6 @@ class MovieProfile(db.Model):
         self.poster = poster
         self.created_at = datetime
 
-    def __repr__(self):
-        return f'<MovieProfile {self.title}>'
+def __repr__(self):
+        return f"Movie('{self.title}', '{self.poster}')"
 

@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
+from os.path import join, dirname
 
+dot_path = join(dirname(__file__),'.env')
 load_dotenv()  # load environment variables from .env if it exists.
 
 class Config(object):

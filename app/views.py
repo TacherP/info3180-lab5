@@ -5,12 +5,13 @@ Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
 import os
-from flask import Flask, render_template, request, flash, jsonify, send_file
+from flask import Flask, render_template, request, flash, jsonify, send_file, send_from_directory
 from app.models import MovieProfile
 from app import app,db
 from app.forms import MovieForm 
 from werkzeug.utils import secure_filename
-
+from flask_wtf.csrf import generate_csrf
+import datetime
 
 
 ###
@@ -20,6 +21,30 @@ from werkzeug.utils import secure_filename
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
+
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({'csrf_token': generate_csrf()})
+
+@app.route('/api/v1/posters/<filename>', methods=['GET'])
+def get_poster(filename):
+    return send_from_directory(os.path.join(app.root_path, 'uploads'), filename)
+
+@app.route('/api/v1/movies', methods=['GET'])
+def get_movies():
+    movies = MovieProfile.query.all()
+    movies_list = []
+    for movie in movies:
+        movies_list.append({
+            'id': movie.id,
+            'title': movie.title,
+            'description': movie.description,
+            'poster': f"/api/v1/posters/{movie.poster}"
+        })
+    return jsonify({'movies': movies_list})
+
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 @app.route('/api/v1/movies', methods=['POST'])
@@ -31,10 +56,11 @@ def movies():
                 title = form.title.data
                 description = form.description.data
                 poster = form.poster.data
+                created_at = datetime.datetime.now()
                 filename = secure_filename(poster.filename)
                 poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-                movie = MovieProfile(title=title, description=description, poster=filename)
+                movie = MovieProfile(title, description, filename, created_at)
                 db.session.add(movie)
                 db.session.commit()
 
