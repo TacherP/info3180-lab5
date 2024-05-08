@@ -1,120 +1,85 @@
-"""
-Flask Documentation:     https://flask.palletsprojects.com/
-Jinja2 Documentation:    https://jinja.palletsprojects.com/
-Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
-This file creates your application.
-"""
 import os
-from flask import Flask, render_template, request, flash, jsonify, send_file, send_from_directory
+from app import app, db
+from flask import render_template, request, send_file, flash, jsonify, redirect, url_for,send_from_directory
 from app.models import MovieProfile
-from app import app,db
 from app.forms import MovieForm 
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import generate_csrf
-import datetime
+from datetime import datetime
 
+# Routing for your application
 
-###
-# Routing for your application.
-###
-
+# Root route
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
 
+# Endpoint to get CSRF token
 @app.route('/api/v1/csrf-token', methods=['GET'])
 def get_csrf():
     return jsonify({'csrf_token': generate_csrf()})
 
-@app.route('/api/v1/posters/<filename>', methods=['GET'])
-def get_poster(filename):
-    return send_from_directory(os.path.join(app.root_path, 'uploads'), filename)
+# Endpoint to save a new movie
+@app.route('/api/v1/movies', methods=['POST'])
+def movies():
+    form = MovieForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        title = form.title.data
+        description = form.description.data
+        poster = form.poster.data
+        created_at = datetime.datetime.now()
+        filename = secure_filename(poster.filename)
+        poster.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
+        new_movie = MovieProfile(title, description, filename, created_at)
+        db.session.add(new_movie)
+        db.session.commit()
+        return jsonify(message='Movie added successfully', status='success', title=title, description=description, poster=filename)
+    return jsonify(errors=form_errors(form))
 
+# Endpoint to get all movies
 @app.route('/api/v1/movies', methods=['GET'])
 def get_movies():
     movies = MovieProfile.query.all()
-    movies_list = []
+    movie_list = []
     for movie in movies:
-        movies_list.append({
+        poster_url = url_for('get_movie_poster', filename=movie.poster, _external=True)
+        movie_list.append({
             'id': movie.id,
             'title': movie.title,
             'description': movie.description,
-            'poster': f"/api/v1/posters/{movie.poster}"
+            'poster': poster_url
         })
-    return jsonify({'movies': movies_list})
-
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    return jsonify(movies=movie_list)
 
 
-@app.route('/api/v1/movies', methods=['POST'])
-def movies():
-    form = MovieForm(request.form)
-    if request.method == 'POST':
-        try:
-            if form.validate_on_submit():
-                title = form.title.data
-                description = form.description.data
-                poster = form.poster.data
-                created_at = datetime.datetime.now()
-                filename = secure_filename(poster.filename)
-                poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+# Endpoint to serve movie posters
+@app.route('/api/v1/posters/<filename>', methods=['GET'])
+def get_poster(filename):
+    return send_from_directory(os.path.join(os.getcwd()), filename)
 
-                movie = MovieProfile(title, description, filename, created_at)
-                db.session.add(movie)
-                db.session.commit()
-
-                flash('Movie added successfully', 'success')
-                return jsonify({
-                    "message": "Movie Successfully added",
-                    "title": title,
-                    "poster": filename,
-                    "description": description
-                }), 201
-            else:
-                return jsonify({"errors": form_errors(form)}), 400
-        except Exception as e:
-            # Handle any exceptions here
-            flash({'An error occurred': str(e)}, 400)
-
-###
-# The functions below should be applicable to all Flask apps.
-###
-
-# Here we define a function to collect form errors from Flask-WTF
-# which we can later use
+# Helper function to collect form errors
 def form_errors(form):
     error_messages = []
-    """Collects form errors"""
     for field, errors in form.errors.items():
         for error in errors:
-            message = u"Error in the %s field - %s" % (
-                    getattr(form, field).label.text,
-                    error)
+            message = f"Error in the {getattr(form, field).label.text} field - {error}"
             error_messages.append(message)
-
     return error_messages
 
+# Function to send a static text file
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):
-    """Send your static text file."""
     file_dot_text = file_name + '.txt'
     return app.send_static_file(file_dot_text)
 
-
+# Function to add headers to responses
 @app.after_request
 def add_header(response):
-    """
-    Add headers to both force latest IE rendering engine or Chrome Frame,
-    and also tell the browser not to cache the rendered page. If we wanted
-    to we could change max-age to 600 seconds which would be 10 minutes.
-    """
     response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
     response.headers['Cache-Control'] = 'public, max-age=0'
     return response
 
-
+# Custom 404 page
 @app.errorhandler(404)
 def page_not_found(error):
-    """Custom 404 page."""
-    return render_template('404.html'), 404
+    return jsonify(message="Page not found"), 404

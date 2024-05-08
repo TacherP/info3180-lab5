@@ -1,27 +1,30 @@
+
 <template>
-  <div class="container">
-    <h1>Movies</h1>
-    <div v-if="movies.length === 0" class="no-movies">No movies available</div>
-    <div v-else class="viewing-title">
-      <div v-for="movie in movies" :key="movie.id" class="movie-view">
-        <a :href="movie.poster" target="_blank" class="movie-card">
-          <img :src="getPosterUrl (movie.poster)" :alt="movie.title" class="movie-poster" />
-        </a>
-        <div class="movie-details">
-          <h3 class="details-title">{{ movie.title }}</h3>
-          <p class="details-description">{{ movie.description }}</p>
+    <div class="movies-container">
+        <h1>Movies</h1>
+
+        <div class="movies">
+            <div v-for="movie in movies" class="movie">
+                <div class="poster-container">
+                    <img :src="getPosterUrl(movie.poster)" class="movie-poster" :alt="movie.title"/>
+                </div>
+                <div class="movie-details">
+                    <h2>{{movie.title }}</h2>
+                    <p>{{ movie.description }}</p>
+                </div>
+                
+            </div>
         </div>
-      </div>
+
     </div>
-  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted } from "vue";
 
 let movies = ref([]);
 
-  onMounted(async () => {
+onMounted(async () => {
     try {
       const response = await fetch('/api/v1/movies');
       if (!response.ok) {
@@ -30,71 +33,52 @@ let movies = ref([]);
       const data = await response.json();
       movies.value = data.movies;
     } catch (error) {
-      console.error('Error fetching movies:', error);
+      /*console.error('Error fetching movies:', error);*/
     }
-  });
+});
 
-  //method to construct the poster URL
-  function getPosterUrl(filename) {
+ //method to construct the poster URL
+ function getPosterUrl(filename) {
     return `/api/v1/posters/${filename}`;
-  }
+ }
+
 
 </script>
 
-<style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
+<style>
 
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  grid-gap: 20px;
-}
+form {
+    display: flex;
+    flex-direction: column;
+  }
 
-.gallery-item {
-  background-color: #f1f1f1;
-  border-radius: 4px;
-  overflow: hidden;
-  transition: transform 0.3s ease;
-}
+    .movies-container{
+        margin: auto 100px;
+    }
 
-.gallery-item:hover {
-  transform: scale(1.05);
-}
+    .movies{
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .movie{
+        max-width: 550px;
+        height: 250px;
+        width: 100%;
+        overflow: hidden;
 
-.gallery-link {
-  display: block;
-}
+        display: grid;
+        grid-template-columns: 1fr 2fr;
 
-.gallery-image {
-  width: 100%;
-  height: 400px;
-  object-fit: cover;
-}
-
-.gallery-info {
-  padding: 15px;
-}
-
-.gallery-title {
-  margin-top: 0;
-  margin-bottom: 5px;
-  font-size: 1.2rem;
-}
-
-.gallery-description {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.no-movies {
-  text-align: center;
-  font-size: 1.2rem;
-  color: #888;
-  margin-top: 40px;
-}
+        margin: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 5px rgb(209, 209, 209);
+    }
+    .movie img{
+        width: 100%;
+        height: 250px;
+        object-fit: contain;
+    }
+    .movie-details{
+        padding: 15px;
+    }
 </style>

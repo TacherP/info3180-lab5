@@ -22,12 +22,12 @@ const router = createRouter({
     {
       path: "/movies/create",
       name: "AddMovieForm",
-      component: AddMovieFormView,
+      component: () => import('../views/AddMovieFormView.vue')
     },
     {
       path: "/movieprofile",
       name: "MovieProfileView",
-      component: MovieProfileView, 
+      component: () => import('../views/MovieProfileView.vue') 
     },
   ],
 });
